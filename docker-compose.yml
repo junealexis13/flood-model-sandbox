@@ -1,0 +1,24 @@
+# No secrets. DATA_DIR is set here. Optional overrides are documented in .env.example.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATA_DIR: /app/data
+    volumes:
+      - hand_data:/app/data
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  hand_data:

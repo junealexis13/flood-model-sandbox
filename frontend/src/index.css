@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #121816;
+  color: #1c1915;
+  font-family: Outfit, "Segoe UI", sans-serif;
+}
+
+.maplibregl-popup-content {
+  background: #f4efe4;
+  border-radius: 2px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  color: #1c1915;
+  padding: 10px 12px;
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: #f4efe4;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: #f4efe4;
+}
+
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: #f4efe4;
+}
+
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: #f4efe4;
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(18, 24, 22, 0.72) !important;
+  color: #d6d3d1 !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #99f6e4 !important;
+}
+
+input[type="range"] {
+  accent-color: #0f766e;
+  width: 100%;
+}
