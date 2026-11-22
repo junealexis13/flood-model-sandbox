@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ControlPanel } from "./components/ControlPanel";
 import { FloodMap } from "./components/FloodMap";
+import { ResultsCard } from "./components/ResultsCard";
+import { TechDoc } from "./components/TechDoc";
 import { UploadModal } from "./components/UploadModal";
 import type { Amc, ClickSample, DatasetSummary, HandGrid, HypsometricCurve } from "./types/flood";
 import { apiUrl, readError } from "./api/client";
@@ -20,6 +22,7 @@ export default function App() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inspector, setInspector] = useState<ClickSample | null>(null);
+  const [docsOpen, setDocsOpen] = useState(false);
   const request = useRef(0);
 
   const solution = useMemo(
@@ -84,10 +87,9 @@ export default function App() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#121816]">
       <FloodMap grid={grid} stageM={solution?.hM ?? 0} onInspect={setInspector} />
-      <div className="pointer-events-none absolute inset-0 p-4">
+      <div className="pointer-events-auto absolute left-3 top-3 z-20 w-[min(280px,calc(100vw-1.5rem))]">
         <ControlPanel
           curve={curve}
-          solution={solution}
           rainfallMm={rainfallMm}
           coverId={coverId}
           amc={amc}
@@ -96,7 +98,6 @@ export default function App() {
           accumCells={accumCells}
           status={status}
           error={error}
-          inspector={inspector}
           onRainfall={setRainfallMm}
           onCover={chooseCover}
           onAmc={chooseAmc}
@@ -105,8 +106,20 @@ export default function App() {
           onAccumCells={setAccumCells}
           onLoadSample={() => void loadSample()}
           onUpload={() => setUploadOpen(true)}
+          onOpenDocs={() => setDocsOpen(true)}
         />
       </div>
+      <div className="pointer-events-auto absolute bottom-3 left-3 right-3 z-20 min-[900px]:bottom-auto min-[900px]:left-auto min-[900px]:right-3 min-[900px]:top-3 min-[900px]:w-[300px]">
+        <ResultsCard
+          curve={curve}
+          solution={solution}
+          rainfallMm={rainfallMm}
+          amc={amc}
+          cn={cn}
+          inspector={inspector}
+        />
+      </div>
+      {docsOpen && <TechDoc onClose={() => setDocsOpen(false)} />}
       {uploadOpen && (
         <UploadModal
           streamKm2={streamKm2}

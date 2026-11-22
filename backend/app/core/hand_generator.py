@@ -17,7 +17,7 @@ If pysheds is missing or fails, the same seven steps run in NumPy.
 The accumulation threshold is in cells. Callers pass a drainage area in km²
 and this module converts it with the centroid UTM pixel area (Δx · Δy).
 It does not subsample the scene: every pixel in the selected window is used.
-Windows are capped at 512×512.
+Windows are capped at 2048×2048.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ from app.core.storage import DATA_DIR, dataset_dir, incoming_dir
 
 logger = logging.getLogger(__name__)
 
-MAX_SCENE = 512
+MAX_SCENE = 2048
 _DIRS = (
     (-1, 0),
     (-1, 1),
@@ -92,20 +92,26 @@ def suggest_window(width: int, height: int) -> SceneWindow:
     )
 
 
-def resolve_window(width: int, height: int, window: SceneWindow | None) -> SceneWindow:
+def resolve_window(
+    width: int,
+    height: int,
+    window: SceneWindow | None,
+    *,
+    max_scene: int | None = MAX_SCENE,
+) -> SceneWindow:
     if window is None:
-        if needs_crop(width, height):
+        if max_scene is not None and (width > max_scene or height > max_scene):
             raise ValueError(
                 f"This raster is {width}×{height}. A scene can be at most "
-                f"{MAX_SCENE}×{MAX_SCENE} pixels, so choose a window. "
+                f"{max_scene}×{max_scene} pixels, so choose a window. "
                 "Rasters already within that limit are computed in full."
             )
         return SceneWindow(0, 0, width, height)
     if window.width < 1 or window.height < 1:
         raise ValueError("Crop window is empty.")
-    if window.width > MAX_SCENE or window.height > MAX_SCENE:
+    if max_scene is not None and (window.width > max_scene or window.height > max_scene):
         raise ValueError(
-            f"Crop window cannot exceed {MAX_SCENE}×{MAX_SCENE} pixels."
+            f"Crop window cannot exceed {max_scene}×{max_scene} pixels."
         )
     if (
         window.col < 0
@@ -256,6 +262,7 @@ def process_raster(
     window: SceneWindow | None,
     stream_threshold_km2: float,
     accum_threshold_cells: float | None,
+    max_scene: int | None = MAX_SCENE,
 ) -> dict:
     """Read one window, build HAND if needed, and write the dataset files."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -264,7 +271,7 @@ def process_raster(
             raise ValueError(
                 "The GeoTIFF has no CRS, so pixel area and the map position cannot be computed."
             )
-        chosen = resolve_window(src.width, src.height, window)
+        chosen = resolve_window(src.width, src.height, window, max_scene=max_scene)
         raster_window = Window(chosen.col, chosen.row, chosen.width, chosen.height)
         values = src.read(1, window=raster_window).astype(np.float64)
         transform = src.window_transform(raster_window)

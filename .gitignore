@@ -10,3 +10,4 @@ backend/.venv/
 backend/data/*
 !backend/data/sample/
 !backend/data/sample/**
+.DS_Store

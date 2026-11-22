@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { DatasetSummary, SceneWindow, UploadPreview } from "../types/flood";
 import { apiUrl, readError } from "../api/client";
-import { CropSelector, clampWindow } from "./CropSelector";
+import { CropSelector, MAX_SCENE, clampWindow } from "./CropSelector";
 
 interface UploadModalProps {
   streamKm2: number;
@@ -108,7 +108,7 @@ export function UploadModal({
       <div className="mt-6 w-[min(640px,100%)] border border-[#e4d8c4] bg-paper p-4 text-ink shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-tide">Scene limit 512×512</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-tide">Scene limit {MAX_SCENE}×{MAX_SCENE}</p>
             <h2 className="font-display text-2xl">Bring a GeoTIFF</h2>
           </div>
           <button type="button" className="text-sm text-stone-500" onClick={onClose}>
@@ -179,8 +179,8 @@ export function UploadModal({
               {preview.source_name} is {preview.width}×{preview.height} px, about {preview.dx_m.toFixed(1)} m by{" "}
               {preview.dy_m.toFixed(1)} m.
               {preview.needs_crop
-                ? " It is larger than 512×512, so choose the window to compute."
-                : " That is within 512×512, so the whole scene is computed."}
+                ? ` It is larger than ${MAX_SCENE}×${MAX_SCENE}, so choose the window to compute.`
+                : ` That is within ${MAX_SCENE}×${MAX_SCENE}, so the whole scene is computed.`}
             </p>
             {preview.needs_crop && window && (
               <div className="mt-3">

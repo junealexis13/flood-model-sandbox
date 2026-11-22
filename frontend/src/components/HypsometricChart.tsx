@@ -75,10 +75,8 @@ export function HypsometricChart({ curve, stageM, volumeM3 }: HypsometricChartPr
 
   return (
     <figure>
-      <div className="mb-1 flex items-baseline justify-between">
-        <figcaption className="text-[11px] uppercase tracking-[0.16em] text-stone-500">
-          Stage storage
-        </figcaption>
+      <div className="mb-1">
+        <figcaption className="text-[11px] uppercase tracking-[0.16em] text-stone-500">Stage–storage</figcaption>
         <p className="font-mono text-[11px] text-stone-600">
           {readout
             ? `${formatStage(hoverStage ?? 0)} · ${formatVolume(readout.volume)}`

@@ -1,12 +1,11 @@
-import { CloudRain, Upload } from "lucide-react";
-import type { Amc, ClickSample, HypsometricCurve, StageSolution } from "../types/flood";
-import { formatArea, formatCells, formatMm, formatStage, formatVolume } from "../utils/format";
-import { COVERS, cnForAmc } from "../utils/hydrology";
-import { HypsometricChart } from "./HypsometricChart";
+import { useState } from "react";
+import { BookOpen, ChevronDown, CloudRain, Upload } from "lucide-react";
+import type { Amc, HypsometricCurve } from "../types/flood";
+import { formatArea, formatCells } from "../utils/format";
+import { AMC_OPTIONS, COVERS, cnForAmc } from "../utils/hydrology";
 
 interface ControlPanelProps {
   curve: HypsometricCurve | null;
-  solution: StageSolution | null;
   rainfallMm: number;
   coverId: string;
   amc: Amc;
@@ -15,7 +14,6 @@ interface ControlPanelProps {
   accumCells: number | null;
   status: string | null;
   error: string | null;
-  inspector: ClickSample | null;
   onRainfall: (value: number) => void;
   onCover: (id: string) => void;
   onAmc: (amc: Amc) => void;
@@ -24,12 +22,12 @@ interface ControlPanelProps {
   onAccumCells: (value: number | null) => void;
   onLoadSample: () => void;
   onUpload: () => void;
+  onOpenDocs: () => void;
 }
 
 export function ControlPanel(props: ControlPanelProps) {
   const {
     curve,
-    solution,
     rainfallMm,
     coverId,
     amc,
@@ -38,7 +36,6 @@ export function ControlPanel(props: ControlPanelProps) {
     accumCells,
     status,
     error,
-    inspector,
     onRainfall,
     onCover,
     onAmc,
@@ -47,29 +44,47 @@ export function ControlPanel(props: ControlPanelProps) {
     onAccumCells,
     onLoadSample,
     onUpload,
+    onOpenDocs,
   } = props;
-  const fraction =
-    curve && solution && curve.a_basin_m2 > 0 ? solution.floodedAreaM2 / curve.a_basin_m2 : 0;
+  const [mobileOpen, setMobileOpen] = useState(true);
+  const cover = COVERS.find((item) => item.id === coverId);
 
   return (
-    <aside className="pointer-events-auto flex max-h-[calc(100vh-2rem)] w-[min(392px,calc(100vw-2rem))] flex-col overflow-y-auto border border-[#e4d8c4] bg-paper text-ink shadow-2xl">
-      <header className="border-b border-[#e4d8c4] px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.22em] text-tide">Height above nearest drainage</p>
-        <h1 className="font-display text-3xl leading-none text-ink">Flood extent</h1>
-        <p className="mt-2 text-sm leading-snug text-stone-600">
-          Rainfall and soil set a stage. The map paints every cell whose HAND is at or below that stage.
-        </p>
-        <div className="mt-3 flex gap-2">
+    <aside className="max-h-[calc(100vh-16rem)] overflow-y-auto border border-[#e4d8c4] bg-paper/95 text-ink shadow-[0_18px_50px_rgba(0,0,0,0.32)] backdrop-blur-md min-[900px]:max-h-[calc(100vh-1.5rem)]">
+      <header className="border-b border-[#e4d8c4] px-4 py-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-tide">Height above nearest drainage</p>
+            <h1 className="font-display text-[1.7rem] leading-none text-ink">Flood extent</h1>
+          </div>
+          <button
+            type="button"
+            className="min-[900px]:hidden border border-stone-300 bg-white px-2 py-1 text-xs"
+            onClick={() => setMobileOpen((open) => !open)}
+          >
+            {mobileOpen ? "Hide" : "Controls"}
+          </button>
+        </div>
+        {curve && <p className="mt-2 text-xs leading-snug text-stone-600">{sceneCaption(curve)}</p>}
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <button type="button" className="bg-ink px-3 py-2 text-sm text-paper" onClick={onLoadSample}>
             Load sample
           </button>
-          <button type="button" className="inline-flex items-center gap-1 border border-ink px-3 py-2 text-sm" onClick={onUpload}>
-            <Upload size={14} /> Upload GeoTIFF
+          <button type="button" className="inline-flex items-center justify-center gap-1 border border-ink px-3 py-2 text-sm" onClick={onUpload}>
+            <Upload size={14} /> Upload
           </button>
         </div>
+        <button
+          type="button"
+          className="mt-2 inline-flex w-full items-center justify-center gap-1.5 border border-tide/40 bg-white px-3 py-2 text-sm text-tide"
+          onClick={onOpenDocs}
+        >
+          <BookOpen size={14} />
+          Technical note
+        </button>
       </header>
 
-      <div className="space-y-4 px-4 py-4">
+      <div className={mobileOpen ? "space-y-3 px-4 py-3" : "hidden space-y-3 px-4 py-3 min-[900px]:block"}>
         {status && <p className="text-sm text-tide">{status}</p>}
         {error && <p className="border border-copper/40 bg-orange-50 px-2 py-1.5 text-sm text-copper">{error}</p>}
 
@@ -78,7 +93,7 @@ export function ControlPanel(props: ControlPanelProps) {
             <span className="inline-flex items-center gap-1">
               <CloudRain size={13} /> Rainfall
             </span>
-            <span className="font-mono text-sm text-ink">{formatMm(rainfallMm)}</span>
+            <span className="font-mono text-sm normal-case tracking-normal text-ink">{rainfallMm.toFixed(0)} mm</span>
           </span>
           <input
             className="mt-2"
@@ -87,24 +102,24 @@ export function ControlPanel(props: ControlPanelProps) {
             max={250}
             step={1}
             value={rainfallMm}
-            aria-valuetext={formatMm(rainfallMm)}
+            aria-valuetext={`${rainfallMm} millimetres`}
             onChange={(event) => onRainfall(Number(event.target.value))}
           />
         </label>
 
         <div>
           <p className="text-[11px] uppercase tracking-[0.14em] text-stone-500">Land cover</p>
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
-            {COVERS.map((cover) => (
+          <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+            {COVERS.map((item) => (
               <button
-                key={cover.id}
+                key={item.id}
                 type="button"
-                onClick={() => onCover(cover.id)}
-                className={`px-2 py-1.5 text-left text-sm ${coverId === cover.id ? "bg-tide text-white" : "bg-white text-ink"}`}
+                onClick={() => onCover(item.id)}
+                className={`px-2 py-1 text-left text-sm ${coverId === item.id ? "bg-tide text-white" : "bg-white text-ink"}`}
               >
-                {cover.label}
-                <span className={`block font-mono text-[10px] ${coverId === cover.id ? "text-teal-100" : "text-stone-500"}`}>
-                  CN {cover.cn2}
+                {item.label}
+                <span className={`block font-mono text-[10px] ${coverId === item.id ? "text-teal-100" : "text-stone-500"}`}>
+                  CN {item.cn2}
                 </span>
               </button>
             ))}
@@ -114,20 +129,14 @@ export function ControlPanel(props: ControlPanelProps) {
         <div>
           <p className="text-[11px] uppercase tracking-[0.14em] text-stone-500">Antecedent moisture</p>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
-            {(
-              [
-                ["I", "Dry"],
-                ["II", "Average"],
-                ["III", "Wet"],
-              ] as const
-            ).map(([id, label]) => (
+            {AMC_OPTIONS.map((option) => (
               <button
-                key={id}
+                key={option.id}
                 type="button"
-                onClick={() => onAmc(id)}
-                className={`px-2 py-1.5 text-sm ${amc === id ? "bg-ink text-paper" : "bg-white"}`}
+                onClick={() => onAmc(option.id)}
+                className={`px-2 py-1.5 text-sm ${amc === option.id ? "bg-ink text-paper" : "bg-white"}`}
               >
-                {label}
+                {option.label}
               </button>
             ))}
           </div>
@@ -136,7 +145,7 @@ export function ControlPanel(props: ControlPanelProps) {
         <label className="block">
           <span className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-stone-500">
             Curve number
-            <span className="font-mono text-sm text-ink">{cn}</span>
+            <span className="font-mono text-sm normal-case tracking-normal text-ink">{cn}</span>
           </span>
           <input
             className="mt-2"
@@ -145,58 +154,25 @@ export function ControlPanel(props: ControlPanelProps) {
             max={98}
             step={1}
             value={cn}
+            aria-valuetext={`Curve number ${cn}`}
             onChange={(event) => onCn(Number(event.target.value))}
           />
-          <span className="mt-1 block text-[11px] text-stone-500">
-            {COVERS.find((cover) => cover.id === coverId)?.note}. AMC {amc} starts near CN{" "}
-            {Math.round(cnForAmc(COVERS.find((cover) => cover.id === coverId)?.cn2 ?? cn, amc))}.
+          <span className="mt-1 block text-[11px] leading-relaxed text-stone-500">
+            {cover?.note ?? "Soil group B"}. {AMC_OPTIONS.find((option) => option.id === amc)?.label} moisture starts near CN{" "}
+            {Math.round(cnForAmc(cover?.cn2 ?? cn, amc))}.
           </span>
         </label>
 
-        <dl className="grid grid-cols-2 gap-2">
-          <Stat label="Runoff depth" value={solution ? formatMm(solution.qMm) : "—"} />
-          <Stat label="Inflow volume" value={solution ? formatVolume(solution.vInM3) : "—"} />
-          <Stat label="Stage" value={solution ? formatStage(solution.hM) : "—"} />
-          <Stat
-            label="Flooded area"
-            value={solution ? `${formatArea(solution.floodedAreaM2)} · ${(fraction * 100).toFixed(1)}%` : "—"}
-          />
-        </dl>
-        {solution?.capped && (
-          <p className="text-xs text-copper">Inflow is above the 15 m stage curve, so the stage is held at 15 m.</p>
-        )}
-
-        {curve && solution && <HypsometricChart curve={curve} stageM={solution.hM} volumeM3={solution.vInM3} />}
-
-        {inspector && (
-          <p className="border border-[#e4d8c4] bg-white px-2 py-1.5 font-mono text-xs leading-relaxed">
-            {inspector.hand === null
-              ? "Click is outside the HAND raster."
-              : inspector.depth === null
-                ? `HAND ${formatStage(inspector.hand)} · dry at this stage`
-                : `HAND ${formatStage(inspector.hand)} · depth ${formatStage(inspector.depth)}`}
-          </p>
-        )}
-
-        <details className="text-sm text-stone-600">
-          <summary className="cursor-pointer text-[11px] uppercase tracking-[0.14em] text-stone-500">Runoff equation</summary>
-          <p className="mt-2 font-mono text-[11px] leading-relaxed">
-            S = 25400/CN − 254
-            <br />
-            Q = (P − 0.2S)² / (P + 0.8S) when P &gt; 0.2S, else 0
-            <br />
-            V = Q / 1000 × basin area
-          </p>
-          <p className="mt-2 text-xs leading-relaxed">
-            Stage is the height on the stored curve whose volume matches V. Moving these sliders does not call the server.
-          </p>
-        </details>
-
-        <div className="border border-[#e4d8c4] bg-white p-3">
-          <p className="text-[11px] uppercase tracking-[0.14em] text-stone-500">Stream threshold for the next DEM</p>
-          <p className="mt-1 text-xs leading-relaxed text-stone-600">
-            Cells with upstream accumulation at or above this count become streams. HAND is the drop to the first stream
-            downstream. The threshold does not skip pixels, and it is not sent while you drag rainfall.
+        <details className="group border-t border-[#e4d8c4] pt-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-stone-500">
+              <ChevronDown size={13} className="transition group-open:rotate-180" />
+              Stream threshold
+            </span>
+            <span className="font-mono text-xs text-ink">{streamKm2.toFixed(2)} km²</span>
+          </summary>
+          <p className="mt-2 text-xs leading-relaxed text-stone-600">
+            Applied the next time a raw DEM is processed. It chooses the streams. It does not rerun while you change the storm.
           </p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <label className="text-[10px] uppercase tracking-wide text-stone-500">
@@ -206,7 +182,7 @@ export function ControlPanel(props: ControlPanelProps) {
                 min={0.0001}
                 step={0.01}
                 value={streamKm2}
-                className="mt-1 w-full border border-stone-300 px-2 py-1 font-mono text-sm text-ink"
+                className="mt-1 w-full border border-stone-300 bg-white px-2 py-1 font-mono text-sm normal-case tracking-normal text-ink"
                 onChange={(event) => onStreamKm2(Number(event.target.value))}
               />
             </label>
@@ -218,7 +194,7 @@ export function ControlPanel(props: ControlPanelProps) {
                 step={1}
                 value={accumCells ?? ""}
                 placeholder="From km²"
-                className="mt-1 w-full border border-stone-300 px-2 py-1 font-mono text-sm text-ink"
+                className="mt-1 w-full border border-stone-300 bg-white px-2 py-1 font-mono text-sm normal-case tracking-normal text-ink"
                 onChange={(event) => {
                   const next = event.target.value;
                   onAccumCells(next === "" ? null : Number(next));
@@ -227,24 +203,22 @@ export function ControlPanel(props: ControlPanelProps) {
             </label>
           </div>
           {curve && (
-            <p className="mt-2 text-xs text-stone-600">
-              {curve.source_kind === "sample" && "Synthetic valley placed near Bay, Laguna for the basemap. "}
+            <p className="mt-2 text-xs leading-relaxed text-stone-600">
               {curve.accum_threshold_cells
-                ? `This dataset used ≥ ${formatCells(curve.accum_threshold_cells)} cells (${(curve.stream_threshold_km2 ?? 0).toFixed(2)} km²) on a ${curve.scene.width}×${curve.scene.height} window.`
+                ? `This scene used ≥ ${formatCells(curve.accum_threshold_cells)} cells (${(curve.stream_threshold_km2 ?? 0).toFixed(2)} km²) on a ${curve.scene.width}×${curve.scene.height} window.`
                 : `Precomputed HAND, ${curve.scene.width}×${curve.scene.height} pixels. No stream threshold was applied.`}
             </p>
           )}
-        </div>
+        </details>
       </div>
     </aside>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white px-2 py-2">
-      <dt className="text-[10px] uppercase tracking-[0.14em] text-stone-500">{label}</dt>
-      <dd className="mt-1 font-mono text-sm leading-tight text-ink">{value}</dd>
-    </div>
-  );
+function sceneCaption(curve: HypsometricCurve): string {
+  const size = `${curve.scene.width}×${curve.scene.height}`;
+  const area = formatArea(curve.a_basin_m2);
+  if (curve.source_kind === "sample") return `${curve.source_name?.trim() || "Sample"} · ${size} · ${area}`;
+  if (curve.source_kind === "hand") return `Uploaded HAND · ${size} · ${area}`;
+  return `DEM scene · ${size} · ${area}`;
 }

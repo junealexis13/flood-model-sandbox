@@ -42,9 +42,9 @@ with Δ*x* and Δ*y* in metres. A cell count typed by the user replaces the area
 
 pysheds runs those steps when it imports. NumPy 2 removed `numpy.in1d`, which pysheds 0.5 still calls, so the process aliases that function to `numpy.isin` before import. If pysheds cannot be imported, the same seven steps run in NumPy. A HAND raster that the user uploads is not recomputed; the stream threshold is ignored and the supplied values are used, with negatives clipped to zero.
 
-### What the 512-pixel limit is
+### What the 2048-pixel limit is
 
-The scene is at most 512 × 512 cells. A raster that is already that size or smaller is used in full. A larger raster must be cropped to a window no bigger than 512 × 512; the window can be smaller, down to 16 cells on a side. The cap is there so the browser can hold the grid. It is not a hydrologic length scale.
+The scene is at most 2048 × 2048 cells. A raster that is already that size or smaller is used in full. A larger raster must be cropped to a window no bigger than 2048 × 2048; the window can be smaller, down to 16 cells on a side. The cap is there so the browser can hold the grid. It is not a hydrologic length scale.
 
 Cropping changes the hydrology. Accumulation and HAND are computed from the cells inside the window only. Area that drains into the window from outside it is missing, so a channel that enters through the edge is too small, and the streams move (Jenson & Domingue, 1988). The drainage-area threshold has to be read with that in mind. A threshold larger than the window’s own area finds no stream, and the API refuses the job. Stream density is a first-order control on a HAND flood map (Patel et al., 2026), so the threshold and the crop should be chosen together, not left at the default on a fragment of a basin.
 
@@ -124,7 +124,7 @@ which is the value the client returns. AMC I at the same *CN*II is 4.2 × 80 / (
 
 ## Sample scene
 
-The dataset shipped with the app is a synthetic valley of 210 rows by 168 columns at 30 m, written in UTM zone 51 N and centred near 121.25° E, 14.15° N so that a satellite basemap has a frame. It is not a survey of Laguna de Bay, and it is not a flood map of that coast. The committed HAND grid was produced with pysheds at the 1 km² stream threshold. Loading it does not recompute the terrain.
+The dataset shipped with the app is a clipped DEM of San Miguel, Bulacan: 1,422 columns by 1,008 rows, about 5 m cells, written in UTM zone 51 N and centred near 121.07° E, 15.18° N. The whole clip is the scene. At 1,422 × 1,008 it sits inside the 2048-pixel limit, so no crop is applied. The committed HAND grid was produced at the 1 km² stream threshold. Loading it does not recompute the terrain.
 
 ## What is left out
 

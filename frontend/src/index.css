@@ -52,3 +52,13 @@ input[type="range"] {
   accent-color: #0f766e;
   width: 100%;
 }
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .maplibregl-ctrl-bottom-right {
+    bottom: 13rem;
+  }
+}

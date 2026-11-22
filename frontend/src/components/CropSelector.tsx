@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { SceneWindow } from "../types/flood";
 
-const MAX_SCENE = 512;
+export const MAX_SCENE = 2048;
 
 interface CropSelectorProps {
   previewUrl: string;

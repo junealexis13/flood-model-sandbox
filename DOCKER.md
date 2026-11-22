@@ -29,9 +29,9 @@ In a browser, open [http://localhost:8080](http://localhost:8080).
 
 ## Load the sample
 
-Click **Load sample**. The first start copies a synthetic valley into the data volume, so this works without uploading a GeoTIFF. Rainfall and curve number update the map in the browser. They do not call the API.
+Click **Load sample**. The first start copies the San Miguel, Bulacan scene into the data volume, so this works without uploading a GeoTIFF. Rainfall and curve number update the map in the browser. They do not call the API.
 
-A raster larger than 512×512 asks you to draw a window. Smaller rasters are computed in full. Raw DEMs still use the stream accumulation threshold (default 1 km², also editable in cells).
+A raster larger than 2048×2048 asks you to draw a window. Smaller rasters are computed in full. Raw DEMs still use the stream accumulation threshold (default 1 km², also editable in cells).
 
 ## Stop
 

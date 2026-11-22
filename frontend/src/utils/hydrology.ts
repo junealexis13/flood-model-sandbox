@@ -9,6 +9,12 @@ export const COVERS: CoverPreset[] = [
   { id: "urban", label: "Urban", cn2: 92, note: "Commercial, soil group B" },
 ];
 
+export const AMC_OPTIONS: { id: Amc; label: string }[] = [
+  { id: "I", label: "Dry" },
+  { id: "II", label: "Average" },
+  { id: "III", label: "Wet" },
+];
+
 /**
  * AMC I and III from the AMC II curve number (Chow et al., 1988).
  * Dry is AMC I. Wet is AMC III. See docs/methods.md.
