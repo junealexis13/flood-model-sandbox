@@ -26,6 +26,7 @@ export interface SceneInfo {
 
 export interface HypsometricCurve {
   dataset_id: string;
+  sample_id?: string | null;
   source_kind: string;
   source_name?: string | null;
   bbox: [number, number, number, number];
@@ -48,10 +49,15 @@ export interface SampleChoice {
   id: string;
   name: string;
   note?: string;
+  width?: number;
+  height?: number;
+  needs_crop?: boolean;
+  max_scene?: number;
 }
 
 export interface DatasetSummary {
   dataset_id: string;
+  sample_id?: string | null;
   source_kind: string;
   source_name?: string | null;
   a_basin_m2: number;
@@ -68,8 +74,7 @@ export interface DatasetSummary {
   hypsometric_url: string;
 }
 
-export interface UploadPreview {
-  upload_id: string;
+export interface RasterPreview {
   source_name: string;
   width: number;
   height: number;
@@ -84,6 +89,14 @@ export interface UploadPreview {
   accum_threshold_cells: number;
   stream_threshold_km2: number;
   preview_url: string;
+}
+
+export interface UploadPreview extends RasterPreview {
+  upload_id: string;
+}
+
+export interface SamplePreview extends RasterPreview {
+  sample_id: string;
 }
 
 export interface HandGrid {

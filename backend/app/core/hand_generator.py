@@ -188,13 +188,16 @@ def _valid_mask(values: np.ndarray, nodata) -> np.ndarray:
     return mask
 
 
-def inspect_upload(
+def inspect_raster(
     src_path: Path,
-    upload_id: str,
+    preview_path: Path,
+    *,
     source_name: str,
     stream_threshold_km2: float,
+    preview_url: str,
+    extra: dict | None = None,
+    reuse_preview: bool = False,
 ) -> dict:
-    preview_path = incoming_dir(upload_id) / "preview.png"
     with rasterio.open(src_path) as src:
         width, height = src.width, src.height
         if src.crs is None:
@@ -206,19 +209,25 @@ def inspect_upload(
         )
         bbox = wgs84_bounds(src.crs, src.transform, width, height)
         nodata = src.nodata
-        scale = min(1.0, 720.0 / max(width, height))
-        preview_w = max(1, int(round(width * scale)))
-        preview_h = max(1, int(round(height * scale)))
-        band = src.read(
-            1,
-            out_shape=(preview_h, preview_w),
-            resampling=Resampling.bilinear,
+        need_preview = (
+            not reuse_preview
+            or not preview_path.is_file()
+            or preview_path.stat().st_mtime < src_path.stat().st_mtime
         )
-    _write_preview(band, nodata, preview_path)
+        if need_preview:
+            scale = min(1.0, 720.0 / max(width, height))
+            preview_w = max(1, int(round(width * scale)))
+            preview_h = max(1, int(round(height * scale)))
+            band = src.read(
+                1,
+                out_shape=(preview_h, preview_w),
+                resampling=Resampling.bilinear,
+            )
+            preview_path.parent.mkdir(parents=True, exist_ok=True)
+            _write_preview(band, nodata, preview_path)
     cells = accum_cells_from_area(dx, dy, stream_threshold_km2)
     window = suggest_window(width, height)
-    return {
-        "upload_id": upload_id,
+    payload = {
         "source_name": source_name,
         "width": width,
         "height": height,
@@ -232,8 +241,28 @@ def inspect_upload(
         "pixel_area_m2": dx * dy,
         "accum_threshold_cells": cells,
         "stream_threshold_km2": stream_threshold_km2,
-        "preview_url": f"/api/uploads/{upload_id}/preview",
+        "preview_url": preview_url,
     }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+def inspect_upload(
+    src_path: Path,
+    upload_id: str,
+    source_name: str,
+    stream_threshold_km2: float,
+) -> dict:
+    preview_path = incoming_dir(upload_id) / "preview.png"
+    return inspect_raster(
+        src_path,
+        preview_path,
+        source_name=source_name,
+        stream_threshold_km2=stream_threshold_km2,
+        preview_url=f"/api/uploads/{upload_id}/preview",
+        extra={"upload_id": upload_id},
+    )
 
 
 def _write_preview(band: np.ndarray, nodata, path: Path) -> None:
@@ -637,6 +666,7 @@ def summary_from_curve(curve: dict) -> dict:
     dataset_id = curve["dataset_id"]
     return {
         "dataset_id": dataset_id,
+        "sample_id": curve.get("sample_id"),
         "source_kind": curve["source_kind"],
         "source_name": curve.get("source_name"),
         "a_basin_m2": curve["a_basin_m2"],

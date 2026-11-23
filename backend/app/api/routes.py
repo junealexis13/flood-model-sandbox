@@ -24,7 +24,12 @@ from app.core.hand_generator import (
     read_curve,
     summary_from_curve,
 )
-from app.core.sample_basin import ensure_sample, list_samples
+from app.core.sample_basin import (
+    ensure_sample,
+    inspect_sample,
+    list_samples,
+    sample_preview_path,
+)
 from app.core.storage import MAX_UPLOAD_BYTES, dataset_dir, ensure_data_dir, incoming_dir
 
 logger = logging.getLogger(__name__)
@@ -72,17 +77,54 @@ def get_hand(dataset_id: str):
 
 
 @router.get("/samples")
-def get_samples() -> list[dict[str, str]]:
+def get_samples() -> list[dict]:
     try:
         return [choice.as_dict() for choice in list_samples()]
     except Exception as exc:
         _raise(exc)
 
 
-@router.post("/datasets/sample")
-async def load_sample(sample_id: str | None = None) -> dict:
+@router.get("/samples/{sample_id}/inspect")
+async def get_sample_inspect(
+    sample_id: str,
+    stream_threshold_km2: float = 1.0,
+) -> dict:
     try:
-        curve = await asyncio.to_thread(ensure_sample, sample_id)
+        return await asyncio.to_thread(inspect_sample, sample_id, stream_threshold_km2)
+    except Exception as exc:
+        _raise(exc)
+
+
+@router.get("/samples/{sample_id}/preview")
+def get_sample_preview(sample_id: str):
+    try:
+        path = sample_preview_path(sample_id)
+    except Exception as exc:
+        _raise(exc)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Sample preview not found.")
+    return FileResponse(path, media_type="image/png")
+
+
+@router.post("/datasets/sample")
+async def load_sample(
+    sample_id: str | None = None,
+    col: int | None = None,
+    row: int | None = None,
+    width: int | None = None,
+    height: int | None = None,
+    stream_threshold_km2: float = 1.0,
+    accum_threshold_cells: float | None = None,
+) -> dict:
+    try:
+        window = _window_from_form(col, row, width, height)
+        curve = await asyncio.to_thread(
+            ensure_sample,
+            sample_id,
+            window=window,
+            stream_threshold_km2=stream_threshold_km2,
+            accum_threshold_cells=accum_threshold_cells,
+        )
     except Exception as exc:
         _raise(exc)
     return summary_from_curve(curve)

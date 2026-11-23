@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { DatasetSummary, SceneWindow, UploadPreview } from "../types/flood";
 import { apiUrl, readError } from "../api/client";
-import { CropSelector, MAX_SCENE, clampWindow } from "./CropSelector";
+import { CropSelector, MAX_SCENE, clampWindow, cropAxisSummary } from "./CropSelector";
 
 interface UploadModalProps {
   streamKm2: number;
@@ -107,7 +107,7 @@ export function UploadModal({
   const thresholdTooHigh = kind === "dem" && cells != null && sceneCells > 0 && cells > sceneCells;
 
   return (
-    <div className="pointer-events-auto fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-[#121816]/70 p-4">
+    <div className="pointer-events-auto fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#121816]/75 p-4">
       <div className="mt-6 w-[min(640px,100%)] border border-[#e4d8c4] bg-paper p-4 text-ink shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -180,10 +180,7 @@ export function UploadModal({
           <div className="mt-4">
             <p className="text-sm text-stone-700">
               {preview.source_name} is {preview.width}×{preview.height} px, about {preview.dx_m.toFixed(1)} m by{" "}
-              {preview.dy_m.toFixed(1)} m.
-              {preview.needs_crop
-                ? ` It is larger than ${MAX_SCENE}×${MAX_SCENE}, so choose the window to compute.`
-                : ` That is within ${MAX_SCENE}×${MAX_SCENE}, so the whole scene is computed.`}
+              {preview.dy_m.toFixed(1)} m. {cropAxisSummary(preview.width, preview.height)}
             </p>
             {preview.needs_crop && window && (
               <div className="mt-3">
@@ -191,6 +188,8 @@ export function UploadModal({
                   previewUrl={apiUrl(preview.preview_url)}
                   rasterWidth={preview.width}
                   rasterHeight={preview.height}
+                  dxM={preview.dx_m}
+                  dyM={preview.dy_m}
                   value={window}
                   onChange={setWindow}
                 />

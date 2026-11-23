@@ -3,11 +3,20 @@ import { Map, Waves } from "lucide-react";
 import { ControlPanel } from "./components/ControlPanel";
 import { FloodMap } from "./components/FloodMap";
 import { ResultsCard } from "./components/ResultsCard";
+import { SampleCropModal } from "./components/SampleCropModal";
 import { TechDoc } from "./components/TechDoc";
 import { UploadModal } from "./components/UploadModal";
 import { FlowSimPage } from "./flowSim/FlowSimPage";
 import type { ActiveHandDem } from "./flowSim/types";
-import type { Amc, ClickSample, DatasetSummary, HandGrid, HypsometricCurve, SampleChoice } from "./types/flood";
+import type {
+  Amc,
+  ClickSample,
+  DatasetSummary,
+  HandGrid,
+  HypsometricCurve,
+  SampleChoice,
+  SceneWindow,
+} from "./types/flood";
 import { apiUrl, readError } from "./api/client";
 import { readHandCog } from "./utils/cogRenderer";
 import { COVERS, cnForAmc, solveStage } from "./utils/hydrology";
@@ -35,6 +44,10 @@ export default function App() {
   const [streamKm2, setStreamKm2] = useState(1);
   const [accumCells, setAccumCells] = useState<number | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [cropSample, setCropSample] = useState<{
+    sample: SampleChoice;
+    initialWindow?: SceneWindow | null;
+  } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inspector, setInspector] = useState<ClickSample | null>(null);
@@ -91,10 +104,17 @@ export default function App() {
       if (!response.ok) throw new Error(await readError(response));
       const list = (await response.json()) as SampleChoice[];
       setSamples(list);
-      const initial = list.find((item) => item.id === "sample") ?? list[0];
+      const initial =
+        list.find((item) => item.id === "sample") ??
+        list.find((item) => !item.needs_crop) ??
+        list[0];
       if (!initial) {
         setStatus(null);
         setError("No sample DEMs were found.");
+        return;
+      }
+      if (initial.needs_crop) {
+        setCropSample({ sample: initial });
         return;
       }
       await loadSample(initial.id, initial.name);
@@ -111,7 +131,20 @@ export default function App() {
       const response = await fetch(apiUrl(`/api/datasets/sample?sample_id=${encodeURIComponent(sampleId)}`), {
         method: "POST",
       });
-      if (!response.ok) throw new Error(await readError(response));
+      if (!response.ok) {
+        const message = await readError(response);
+        if (message.includes("choose a window")) {
+          const choice = samples.find((item) => item.id === sampleId) ?? {
+            id: sampleId,
+            name: name ?? sampleId,
+            needs_crop: true,
+          };
+          setStatus(null);
+          setCropSample({ sample: choice });
+          return;
+        }
+        throw new Error(message);
+      }
       const summary = (await response.json()) as DatasetSummary;
       setActiveHandDem({
         kind: "sample",
@@ -191,7 +224,25 @@ export default function App() {
             onAccumCells={setAccumCells}
             onSample={(id) => {
               const choice = samples.find((item) => item.id === id);
+              if (choice?.needs_crop) {
+                setError(null);
+                setCropSample({ sample: choice });
+                return;
+              }
               void loadSample(id, choice?.name);
+            }}
+            onAdjustSampleAoi={(sample) => {
+              setError(null);
+              const activeWindow =
+                curve && (curve.sample_id ?? curve.dataset_id) === sample.id
+                  ? {
+                      col: curve.scene.col,
+                      row: curve.scene.row,
+                      width: curve.scene.width,
+                      height: curve.scene.height,
+                    }
+                  : null;
+              setCropSample({ sample, initialWindow: activeWindow });
             }}
             onUpload={() => setUploadOpen(true)}
           />
@@ -207,6 +258,26 @@ export default function App() {
           />
         </div>
         {docsOpen && <TechDoc onClose={() => setDocsOpen(false)} />}
+        {cropSample && (
+          <SampleCropModal
+            sample={cropSample.sample}
+            initialWindow={cropSample.initialWindow}
+            streamKm2={streamKm2}
+            accumCells={accumCells}
+            onStreamKm2={setStreamKm2}
+            onAccumCells={setAccumCells}
+            onClose={() => setCropSample(null)}
+            onProcessed={(summary, sample) => {
+              setCropSample(null);
+              setActiveHandDem({
+                kind: "sample",
+                sampleId: sample.id,
+                label: sample.name,
+              });
+              void loadSummary(summary);
+            }}
+          />
+        )}
         {uploadOpen && (
           <UploadModal
             streamKm2={streamKm2}

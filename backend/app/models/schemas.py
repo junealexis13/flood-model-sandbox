@@ -24,6 +24,7 @@ class SceneInfo(BaseModel):
 
 class DatasetSummary(BaseModel):
     dataset_id: str
+    sample_id: str | None = None
     source_kind: str
     source_name: str | None = None
     a_basin_m2: float

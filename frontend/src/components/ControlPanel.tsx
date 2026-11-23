@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, CloudRain, Upload } from "lucide-react";
+import { ChevronDown, CloudRain, Crop, Upload } from "lucide-react";
 import type { Amc, HypsometricCurve, SampleChoice } from "../types/flood";
 import { formatArea, formatCells } from "../utils/format";
 import { AMC_OPTIONS, COVERS, cnForAmc } from "../utils/hydrology";
@@ -22,6 +22,7 @@ interface ControlPanelProps {
   onAccumCells: (value: number | null) => void;
   samples: SampleChoice[];
   onSample: (id: string) => void;
+  onAdjustSampleAoi: (sample: SampleChoice) => void;
   onUpload: () => void;
 }
 
@@ -44,10 +45,12 @@ export function ControlPanel(props: ControlPanelProps) {
     onAccumCells,
     samples,
     onSample,
+    onAdjustSampleAoi,
     onUpload,
   } = props;
   const [mobileOpen, setMobileOpen] = useState(true);
-  const selectedSample = samples.find((item) => item.id === curve?.dataset_id);
+  const activeSampleId = curve?.sample_id ?? curve?.dataset_id;
+  const selectedSample = samples.find((item) => item.id === activeSampleId);
   const [info, setInfo] = useState<"cover" | "cn" | null>(null);
   const cover = COVERS.find((item) => item.id === coverId);
 
@@ -72,7 +75,7 @@ export function ControlPanel(props: ControlPanelProps) {
           <span className="text-[11px] uppercase tracking-[0.14em] text-stone-500">Sample basin</span>
           <select
             className="mt-1.5 w-full border border-stone-300 bg-white px-2 py-2 text-sm text-ink disabled:text-stone-400"
-            value={samples.some((item) => item.id === curve?.dataset_id) ? curve?.dataset_id : ""}
+            value={selectedSample ? selectedSample.id : ""}
             disabled={samples.length === 0 || status !== null}
             aria-label="Sample basin"
             onChange={(event) => {
@@ -80,7 +83,7 @@ export function ControlPanel(props: ControlPanelProps) {
             }}
           >
             {samples.length === 0 && <option value="">No sample DEMs</option>}
-            {samples.length > 0 && !samples.some((item) => item.id === curve?.dataset_id) && (
+            {samples.length > 0 && !selectedSample && (
               <option value="">Choose a sample</option>
             )}
             {samples.map((item) => (
@@ -95,6 +98,20 @@ export function ControlPanel(props: ControlPanelProps) {
             </span>
           )}
         </label>
+        {selectedSample?.needs_crop && (
+          <button
+            type="button"
+            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 border border-tide bg-tide/10 px-3 py-1.5 text-xs font-medium text-tide hover:bg-tide/15"
+            onClick={() => onAdjustSampleAoi(selectedSample)}
+          >
+            <Crop size={13} /> Adjust AOI window
+            {curve && (
+              <span className="font-mono text-[10px] opacity-80">
+                ({curve.scene.width}×{curve.scene.height})
+              </span>
+            )}
+          </button>
+        )}
         <button
           type="button"
           className="mt-2 inline-flex w-full items-center justify-center gap-1 border border-ink px-3 py-2 text-sm"
