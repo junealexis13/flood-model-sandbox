@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { BookOpen, ChevronDown, CloudRain, Upload } from "lucide-react";
-import type { Amc, HypsometricCurve } from "../types/flood";
+import { ChevronDown, CloudRain, Upload } from "lucide-react";
+import type { Amc, HypsometricCurve, SampleChoice } from "../types/flood";
 import { formatArea, formatCells } from "../utils/format";
 import { AMC_OPTIONS, COVERS, cnForAmc } from "../utils/hydrology";
 
@@ -20,9 +20,9 @@ interface ControlPanelProps {
   onCn: (cn: number) => void;
   onStreamKm2: (value: number) => void;
   onAccumCells: (value: number | null) => void;
-  onLoadSample: () => void;
+  samples: SampleChoice[];
+  onSample: (id: string) => void;
   onUpload: () => void;
-  onOpenDocs: () => void;
 }
 
 export function ControlPanel(props: ControlPanelProps) {
@@ -42,15 +42,17 @@ export function ControlPanel(props: ControlPanelProps) {
     onCn,
     onStreamKm2,
     onAccumCells,
-    onLoadSample,
+    samples,
+    onSample,
     onUpload,
-    onOpenDocs,
   } = props;
   const [mobileOpen, setMobileOpen] = useState(true);
+  const selectedSample = samples.find((item) => item.id === curve?.dataset_id);
+  const [info, setInfo] = useState<"cover" | "cn" | null>(null);
   const cover = COVERS.find((item) => item.id === coverId);
 
   return (
-    <aside className="max-h-[calc(100vh-16rem)] overflow-y-auto border border-[#e4d8c4] bg-paper/95 text-ink shadow-[0_18px_50px_rgba(0,0,0,0.32)] backdrop-blur-md min-[900px]:max-h-[calc(100vh-1.5rem)]">
+    <aside className="max-h-[calc(100vh-22rem)] overflow-y-auto border border-[#e4d8c4] bg-paper/95 text-ink shadow-[0_18px_50px_rgba(0,0,0,0.32)] backdrop-blur-md min-[900px]:max-h-[calc(100vh-7.5rem)]">
       <header className="border-b border-[#e4d8c4] px-4 py-2.5">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -65,22 +67,40 @@ export function ControlPanel(props: ControlPanelProps) {
             {mobileOpen ? "Hide" : "Controls"}
           </button>
         </div>
-        {curve && <p className="mt-2 text-xs leading-snug text-stone-600">{sceneCaption(curve)}</p>}
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button type="button" className="bg-ink px-3 py-2 text-sm text-paper" onClick={onLoadSample}>
-            Load sample
-          </button>
-          <button type="button" className="inline-flex items-center justify-center gap-1 border border-ink px-3 py-2 text-sm" onClick={onUpload}>
-            <Upload size={14} /> Upload
-          </button>
-        </div>
+        {curve && <p className="mt-2 text-xs leading-snug text-stone-600">{sceneCaption(curve, selectedSample?.name)}</p>}
+        <label className="mt-3 block">
+          <span className="text-[11px] uppercase tracking-[0.14em] text-stone-500">Sample basin</span>
+          <select
+            className="mt-1.5 w-full border border-stone-300 bg-white px-2 py-2 text-sm text-ink disabled:text-stone-400"
+            value={samples.some((item) => item.id === curve?.dataset_id) ? curve?.dataset_id : ""}
+            disabled={samples.length === 0 || status !== null}
+            aria-label="Sample basin"
+            onChange={(event) => {
+              if (event.target.value) onSample(event.target.value);
+            }}
+          >
+            {samples.length === 0 && <option value="">No sample DEMs</option>}
+            {samples.length > 0 && !samples.some((item) => item.id === curve?.dataset_id) && (
+              <option value="">Choose a sample</option>
+            )}
+            {samples.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          {selectedSample?.note && (
+            <span className="mt-1.5 block text-[11px] normal-case leading-relaxed tracking-normal text-stone-600">
+              {selectedSample.note}
+            </span>
+          )}
+        </label>
         <button
           type="button"
-          className="mt-2 inline-flex w-full items-center justify-center gap-1.5 border border-tide/40 bg-white px-3 py-2 text-sm text-tide"
-          onClick={onOpenDocs}
+          className="mt-2 inline-flex w-full items-center justify-center gap-1 border border-ink px-3 py-2 text-sm"
+          onClick={onUpload}
         >
-          <BookOpen size={14} />
-          Technical note
+          <Upload size={14} /> Upload
         </button>
       </header>
 
@@ -99,7 +119,7 @@ export function ControlPanel(props: ControlPanelProps) {
             className="mt-2"
             type="range"
             min={0}
-            max={250}
+            max={450}
             step={1}
             value={rainfallMm}
             aria-valuetext={`${rainfallMm} millimetres`}
@@ -108,7 +128,30 @@ export function ControlPanel(props: ControlPanelProps) {
         </label>
 
         <div>
-          <p className="text-[11px] uppercase tracking-[0.14em] text-stone-500">Land cover</p>
+          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-stone-500">
+            Land cover
+            <InfoMark
+              label="About land-cover curve numbers"
+              open={info === "cover"}
+              onToggle={() => setInfo((current) => (current === "cover" ? null : "cover"))}
+            />
+          </p>
+          {info === "cover" && (
+            <div className="mt-1.5 border border-[#e4d8c4] bg-white px-2 py-1.5 text-[11px] normal-case leading-relaxed tracking-normal text-stone-600">
+              <p>
+                Each cover applies one curve number to the whole scene. These are Technical Release 55 values for
+                hydrologic soil group B, which infiltrates at a moderate rate, at average moisture. A higher number
+                means more of the storm becomes runoff.
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                <li><CnValue n={55} /> Woods in good condition. Most rain is stored.</li>
+                <li><CnValue n={69} /> Pasture or grass in fair condition.</li>
+                <li><CnValue n={78} /> Row crops, straight row, good condition.</li>
+                <li><CnValue n={85} /> Residential lots of 1/8 acre or smaller.</li>
+                <li><CnValue n={92} /> Commercial urban cover. Little storage, so most rain runs off.</li>
+              </ul>
+            </div>
+          )}
           <div className="mt-1.5 grid grid-cols-2 gap-1.5">
             {COVERS.map((item) => (
               <button
@@ -142,11 +185,36 @@ export function ControlPanel(props: ControlPanelProps) {
           </div>
         </div>
 
-        <label className="block">
-          <span className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-stone-500">
-            Curve number
+        <div>
+          <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-stone-500">
+            <span className="inline-flex items-center gap-1.5">
+              Curve number
+              <InfoMark
+                label="About the curve number"
+                open={info === "cn"}
+                onToggle={() => setInfo((current) => (current === "cn" ? null : "cn"))}
+              />
+            </span>
             <span className="font-mono text-sm normal-case tracking-normal text-ink">{cn}</span>
-          </span>
+          </div>
+          {info === "cn" && (
+            <div className="mt-1.5 border border-[#e4d8c4] bg-white px-2 py-1.5 text-[11px] normal-case leading-relaxed tracking-normal text-stone-600">
+              <p>
+                The curve number is the Soil Conservation Service index of how readily storm rain becomes runoff. Low
+                values describe cover and soil that store rainfall. High values describe cover that sheds it. At 100,
+                every millimetre of rain would run off. This slider runs from 35 to 98.
+              </p>
+              <p className="mt-1.5">
+                Potential retention is <span className="font-mono">S = 25400/CN − 254</span> mm. Runoff begins only
+                after the first fifth of that storage. Rain beyond that point becomes a runoff depth, and that depth
+                times the basin area is the volume placed on the terrain.
+              </p>
+              <p className="mt-1.5">
+                A land cover or a moisture state sets the number. Drag the slider for a mixed basin, or for a soil that
+                is not group B. Dry soil lowers it. Wet soil raises it.
+              </p>
+            </div>
+          )}
           <input
             className="mt-2"
             type="range"
@@ -154,6 +222,7 @@ export function ControlPanel(props: ControlPanelProps) {
             max={98}
             step={1}
             value={cn}
+            aria-label="Curve number"
             aria-valuetext={`Curve number ${cn}`}
             onChange={(event) => onCn(Number(event.target.value))}
           />
@@ -161,7 +230,7 @@ export function ControlPanel(props: ControlPanelProps) {
             {cover?.note ?? "Soil group B"}. {AMC_OPTIONS.find((option) => option.id === amc)?.label} moisture starts near CN{" "}
             {Math.round(cnForAmc(cover?.cn2 ?? cn, amc))}.
           </span>
-        </label>
+        </div>
 
         <details className="group border-t border-[#e4d8c4] pt-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
@@ -215,10 +284,30 @@ export function ControlPanel(props: ControlPanelProps) {
   );
 }
 
-function sceneCaption(curve: HypsometricCurve): string {
+function InfoMark({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-expanded={open}
+      className={`inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border font-serif text-[9px] italic leading-none tracking-normal ${
+        open ? "border-tide bg-tide text-white" : "border-stone-400 text-stone-500"
+      }`}
+      onClick={onToggle}
+    >
+      i
+    </button>
+  );
+}
+
+function CnValue({ n }: { n: number }) {
+  return <span className="font-mono text-ink">CN {n}.</span>;
+}
+
+function sceneCaption(curve: HypsometricCurve, sampleName?: string): string {
   const size = `${curve.scene.width}×${curve.scene.height}`;
   const area = formatArea(curve.a_basin_m2);
-  if (curve.source_kind === "sample") return `${curve.source_name?.trim() || "Sample"} · ${size} · ${area}`;
+  if (curve.source_kind === "sample") return `${sampleName?.trim() || curve.source_name?.trim() || "Sample"} · ${size} · ${area}`;
   if (curve.source_kind === "hand") return `Uploaded HAND · ${size} · ${area}`;
   return `DEM scene · ${size} · ${area}`;
 }

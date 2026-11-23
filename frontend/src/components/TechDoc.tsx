@@ -240,7 +240,7 @@ function Parameters() {
       <h3 className="font-display text-2xl text-ink">Storm Rainfall (P)</h3>
       <p>
         Rainfall <em className="font-serif">P</em> represents cumulative storm depth in millimeters, adjustable from 0 to
-        250 mm and applied uniformly across the scene. The control specifies total event rainfall without temporal
+        450 mm and applied uniformly across the scene. The control specifies total event rainfall without temporal
         hyetograph distribution or dynamic infiltration losses beyond those parameterized by the curve number.
       </p>
 
@@ -362,7 +362,7 @@ function LandCover() {
     <article className="space-y-4 text-[15px] leading-relaxed text-stone-700">
       <p>
         Selecting a land-cover preset assigns a uniform curve number across the entire active scene. Map colors continue
-        to represent water depth, while the underlying HAND terrain grid and satellite basemap remain unchanged.
+        to represent water depth, while the underlying HAND terrain grid and basemap remain unchanged.
       </p>
       <p>
         The five presets correspond to standard Hydrologic Soil Group B classifications published in Technical Release 55

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
+import { BookOpen } from "lucide-react";
 import type { ClickSample, HandGrid } from "../types/flood";
 import { depthRampCss, gridBounds, gridCorners, paintFlood, sampleHand } from "../utils/cogRenderer";
 import { formatStage } from "../utils/format";
@@ -8,27 +9,41 @@ interface FloodMapProps {
   grid: HandGrid | null;
   stageM: number;
   onInspect: (sample: ClickSample) => void;
+  onOpenDocs: () => void;
 }
+
+type BasemapId = "hybrid" | "osm";
+
+const GOOGLE_TILES = [0, 1, 2, 3].map(
+  (host) => `https://mt${host}.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}`,
+);
 
 const STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    imagery: {
+    "basemap-hybrid": {
       type: "raster",
-      tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      ],
+      tiles: GOOGLE_TILES,
       tileSize: 256,
-      attribution: "Esri, Maxar, Earthstar Geographics",
+      maxzoom: 20,
+      attribution: "Google",
+    },
+    "basemap-osm": {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: "© OpenStreetMap",
     },
   },
   layers: [
     { id: "background", type: "background", paint: { "background-color": "#141816" } },
-    { id: "imagery", type: "raster", source: "imagery" },
+    { id: "basemap-hybrid", type: "raster", source: "basemap-hybrid" },
+    { id: "basemap-osm", type: "raster", source: "basemap-osm", layout: { visibility: "none" } },
   ],
 };
 
-export function FloodMap({ grid, stageM, onInspect }: FloodMapProps) {
+export function FloodMap({ grid, stageM, onInspect, onOpenDocs }: FloodMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -36,11 +51,15 @@ export function FloodMap({ grid, stageM, onInspect }: FloodMapProps) {
   const gridRef = useRef<HandGrid | null>(grid);
   const stageRef = useRef(stageM);
   const onInspectRef = useRef(onInspect);
+  const overlayRef = useRef(1);
   const [ready, setReady] = useState(false);
+  const [basemap, setBasemap] = useState<BasemapId>("hybrid");
+  const [overlay, setOverlay] = useState(1);
 
   gridRef.current = grid;
   stageRef.current = stageM;
   onInspectRef.current = onInspect;
+  overlayRef.current = overlay;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -89,7 +108,12 @@ export function FloodMap({ grid, stageM, onInspect }: FloodMapProps) {
       coordinates: gridCorners(grid),
       animate: true,
     });
-    map.addLayer({ id: "hand-flood", type: "raster", source: "hand-flood" });
+    map.addLayer({
+      id: "hand-flood",
+      type: "raster",
+      source: "hand-flood",
+      paint: { "raster-opacity": overlayRef.current },
+    });
     const wide = window.innerWidth >= 900;
     map.fitBounds(gridBounds(grid), {
       padding: wide
@@ -107,12 +131,51 @@ export function FloodMap({ grid, stageM, onInspect }: FloodMapProps) {
     return () => cancelAnimationFrame(frame);
   }, [grid, stageM]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    map.setLayoutProperty("basemap-hybrid", "visibility", basemap === "hybrid" ? "visible" : "none");
+    map.setLayoutProperty("basemap-osm", "visibility", basemap === "osm" ? "visible" : "none");
+  }, [basemap, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !map.getLayer("hand-flood")) return;
+    map.setPaintProperty("hand-flood", "raster-opacity", overlay);
+  }, [overlay, ready, grid]);
+
   return (
     <div className="absolute inset-0">
       <div ref={containerRef} className="h-full w-full" />
       <canvas id="hand-depth-canvas" ref={canvasRef} className="pointer-events-none absolute -left-[9999px] top-0" aria-hidden />
-      <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 hidden w-[240px] -translate-x-1/2 min-[900px]:block">
-        <div className="border border-white/15 bg-[#121816]/80 px-3 py-2 text-white shadow-lg backdrop-blur-md">
+      <div className="pointer-events-none absolute bottom-[15.5rem] left-1/2 z-30 flex w-[min(680px,calc(100vw-1.5rem))] -translate-x-1/2 flex-wrap items-stretch justify-center gap-2 min-[900px]:bottom-6">
+        <div className="pointer-events-auto flex h-fit self-center overflow-hidden border border-white/15 bg-[#121816]/80 text-[11px] text-stone-200 shadow-lg backdrop-blur-md">
+          <button
+            type="button"
+            className={`px-2.5 py-2 ${basemap === "hybrid" ? "bg-white text-ink" : ""}`}
+            aria-pressed={basemap === "hybrid"}
+            onClick={() => setBasemap("hybrid")}
+          >
+            Google
+          </button>
+          <button
+            type="button"
+            className={`px-2.5 py-2 ${basemap === "osm" ? "bg-white text-ink" : ""}`}
+            aria-pressed={basemap === "osm"}
+            onClick={() => setBasemap("osm")}
+          >
+            OSM
+          </button>
+        </div>
+        <button
+          type="button"
+          className="pointer-events-auto inline-flex items-center gap-1.5 self-center border border-[#e4d8c4] bg-paper/95 px-2.5 py-2 text-sm text-tide shadow-lg"
+          onClick={onOpenDocs}
+        >
+          <BookOpen size={14} />
+          Technical note
+        </button>
+        <div className="pointer-events-none w-[220px] border border-white/15 bg-[#121816]/80 px-3 py-2 text-white shadow-lg backdrop-blur-md">
           <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-stone-300">Water depth</p>
           <div className="h-2 w-full" style={{ background: depthRampCss() }} />
           <div className="relative mt-1 h-3.5 font-mono text-[10px] text-stone-300">
@@ -122,6 +185,23 @@ export function FloodMap({ grid, stageM, onInspect }: FloodMapProps) {
             <span className="absolute left-[75%] -translate-x-1/2 whitespace-nowrap">6 m+</span>
           </div>
         </div>
+        <label className="pointer-events-auto flex w-[9.5rem] flex-col justify-center border border-white/15 bg-[#121816]/80 px-3 py-2 text-white shadow-lg backdrop-blur-md">
+          <span className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-stone-300">
+            Overlay
+            <span className="font-mono normal-case tracking-normal">{Math.round(overlay * 100)}%</span>
+          </span>
+          <input
+            className="mt-1.5"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={Math.round(overlay * 100)}
+            aria-label="Flood overlay opacity"
+            aria-valuetext={`${Math.round(overlay * 100)} percent opaque`}
+            onChange={(event) => setOverlay(Number(event.target.value) / 100)}
+          />
+        </label>
       </div>
     </div>
   );

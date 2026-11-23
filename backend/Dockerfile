@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install -r /app/requirements.txt
 
 COPY backend/app /app/app
-COPY sample_rasters/san_miguel_clipped.tif /opt/sample-dem/san_miguel_clipped.tif
+COPY sample_rasters/ /opt/sample-dem/
 COPY backend/data/sample /opt/sample-seed
 COPY backend/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

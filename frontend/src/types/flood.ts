@@ -44,6 +44,12 @@ export interface HypsometricCurve {
   h_max_m?: number;
 }
 
+export interface SampleChoice {
+  id: string;
+  name: string;
+  note?: string;
+}
+
 export interface DatasetSummary {
   dataset_id: string;
   source_kind: string;

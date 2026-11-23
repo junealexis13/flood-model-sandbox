@@ -4,7 +4,7 @@ import { FloodMap } from "./components/FloodMap";
 import { ResultsCard } from "./components/ResultsCard";
 import { TechDoc } from "./components/TechDoc";
 import { UploadModal } from "./components/UploadModal";
-import type { Amc, ClickSample, DatasetSummary, HandGrid, HypsometricCurve } from "./types/flood";
+import type { Amc, ClickSample, DatasetSummary, HandGrid, HypsometricCurve, SampleChoice } from "./types/flood";
 import { apiUrl, readError } from "./api/client";
 import { readHandCog } from "./utils/cogRenderer";
 import { COVERS, cnForAmc, solveStage } from "./utils/hydrology";
@@ -23,6 +23,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [inspector, setInspector] = useState<ClickSample | null>(null);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [samples, setSamples] = useState<SampleChoice[]>([]);
   const request = useRef(0);
 
   const solution = useMemo(
@@ -31,7 +32,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    void loadSample();
+    void loadCatalog();
   }, []);
 
   async function loadSummary(summary: DatasetSummary) {
@@ -59,11 +60,33 @@ export default function App() {
     }
   }
 
-  async function loadSample() {
+  async function loadCatalog() {
     setError(null);
-    setStatus("Loading the sample basin…");
     try {
-      const response = await fetch(apiUrl("/api/datasets/sample"), { method: "POST" });
+      const response = await fetch(apiUrl("/api/samples"));
+      if (!response.ok) throw new Error(await readError(response));
+      const list = (await response.json()) as SampleChoice[];
+      setSamples(list);
+      const initial = list.find((item) => item.id === "sample") ?? list[0];
+      if (!initial) {
+        setStatus(null);
+        setError("No sample DEMs were found.");
+        return;
+      }
+      await loadSample(initial.id, initial.name);
+    } catch (exc) {
+      setStatus(null);
+      setError(exc instanceof Error ? exc.message : "The sample list did not load.");
+    }
+  }
+
+  async function loadSample(sampleId: string, name?: string) {
+    setError(null);
+    setStatus(`Loading ${name ?? "the sample basin"}…`);
+    try {
+      const response = await fetch(apiUrl(`/api/datasets/sample?sample_id=${encodeURIComponent(sampleId)}`), {
+        method: "POST",
+      });
       if (!response.ok) throw new Error(await readError(response));
       await loadSummary((await response.json()) as DatasetSummary);
     } catch (exc) {
@@ -86,7 +109,7 @@ export default function App() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#121816]">
-      <FloodMap grid={grid} stageM={solution?.hM ?? 0} onInspect={setInspector} />
+      <FloodMap grid={grid} stageM={solution?.hM ?? 0} onInspect={setInspector} onOpenDocs={() => setDocsOpen(true)} />
       <div className="pointer-events-auto absolute left-3 top-3 z-20 w-[min(280px,calc(100vw-1.5rem))]">
         <ControlPanel
           curve={curve}
@@ -102,11 +125,14 @@ export default function App() {
           onCover={chooseCover}
           onAmc={chooseAmc}
           onCn={setCn}
+          samples={samples}
           onStreamKm2={setStreamKm2}
           onAccumCells={setAccumCells}
-          onLoadSample={() => void loadSample()}
+          onSample={(id) => {
+            const choice = samples.find((item) => item.id === id);
+            void loadSample(id, choice?.name);
+          }}
           onUpload={() => setUploadOpen(true)}
-          onOpenDocs={() => setDocsOpen(true)}
         />
       </div>
       <div className="pointer-events-auto absolute bottom-3 left-3 right-3 z-20 min-[900px]:bottom-auto min-[900px]:left-auto min-[900px]:right-3 min-[900px]:top-3 min-[900px]:w-[300px]">

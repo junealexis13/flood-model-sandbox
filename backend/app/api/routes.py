@@ -24,7 +24,7 @@ from app.core.hand_generator import (
     read_curve,
     summary_from_curve,
 )
-from app.core.sample_basin import ensure_sample
+from app.core.sample_basin import ensure_sample, list_samples
 from app.core.storage import MAX_UPLOAD_BYTES, dataset_dir, ensure_data_dir, incoming_dir
 
 logger = logging.getLogger(__name__)
@@ -71,10 +71,18 @@ def get_hand(dataset_id: str):
     return FileResponse(path, media_type="image/tiff")
 
 
-@router.post("/datasets/sample")
-async def load_sample() -> dict:
+@router.get("/samples")
+def get_samples() -> list[dict[str, str]]:
     try:
-        curve = await asyncio.to_thread(ensure_sample)
+        return [choice.as_dict() for choice in list_samples()]
+    except Exception as exc:
+        _raise(exc)
+
+
+@router.post("/datasets/sample")
+async def load_sample(sample_id: str | None = None) -> dict:
+    try:
+        curve = await asyncio.to_thread(ensure_sample, sample_id)
     except Exception as exc:
         _raise(exc)
     return summary_from_curve(curve)

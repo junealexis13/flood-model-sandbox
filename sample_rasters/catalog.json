@@ -1,0 +1,20 @@
+[
+  {
+    "file": "san_miguel_clipped.tif",
+    "id": "sample",
+    "name": "San Miguel, Bulacan",
+    "note": "Western part of San Miguel in boundary of San Miguel - Dona Remedios Trinidad municipality."
+  },
+  {
+    "file": "r3_gabaldon.tif",
+    "id": "r3_gabaldon",
+    "name": "Gabaldon, Nueva Ecija",
+    "note": "Gabaldon in a valley with Dingalan - Aurora boundary."
+  },
+  {
+    "file": "r3_cabanatuan.tif",
+    "id": "r3_cabanatuan",
+    "name": "Cabanatuan, Nueva Ecija",
+    "note": "Mayapyap - Valdefuente area of Cabanatuan."
+  }
+]
