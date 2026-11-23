@@ -5,7 +5,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     ports:
-      - "8000:8000"
+      # Host 8000 is taken by sinag_web_platform. Container port stays 8000;
+      # nginx in the web service still proxies to api:8000 on the compose network.
+      - "127.0.0.1:8010:8000"
     environment:
       DATA_DIR: /app/data
     volumes:

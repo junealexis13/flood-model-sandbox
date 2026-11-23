@@ -82,7 +82,7 @@ docker compose build
 docker compose up
 ```
 
-Open [http://localhost:8080](http://localhost:8080) and click **Load sample**. Stop with `docker compose down`. Datasets persist in the `hand_data` volume. `docker compose down -v` deletes that volume. Details are in [DOCKER.md](DOCKER.md).
+Open [http://localhost:8080](http://localhost:8080) and click **Load sample**. The API is published on [http://127.0.0.1:8010](http://127.0.0.1:8010) so it does not collide with other stacks already bound to host port 8000. Stop with `docker compose down`. Datasets persist in the `hand_data` volume. `docker compose down -v` deletes that volume. Details are in [DOCKER.md](DOCKER.md).
 
 ---
 

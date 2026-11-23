@@ -5,7 +5,7 @@ No accounts, API keys, or secrets. The image does not bake in credentials.
 ## Prerequisites
 
 - Docker Engine with Compose v2 (`docker compose version` should print a version).
-- Ports 8000 and 8080 free on your machine.
+- Ports 8010 and 8080 free on your machine. Host port 8000 is left free because other local stacks already bind it.
 
 ## Build
 
@@ -21,7 +21,7 @@ docker compose build
 docker compose up
 ```
 
-Leave that terminal open. The API listens on port 8000 and the web UI on port 8080.
+Leave that terminal open. The web UI is on port 8080. The API is published on host port 8010 (container port 8000). The UI does not call that host port; the web container proxies `/api` to `api:8000` on the Compose network.
 
 ## Open the UI
 
