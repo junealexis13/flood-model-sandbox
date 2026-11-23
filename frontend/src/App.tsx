@@ -1,15 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Map, Waves } from "lucide-react";
 import { ControlPanel } from "./components/ControlPanel";
 import { FloodMap } from "./components/FloodMap";
 import { ResultsCard } from "./components/ResultsCard";
 import { TechDoc } from "./components/TechDoc";
 import { UploadModal } from "./components/UploadModal";
+import { FlowSimPage } from "./flowSim/FlowSimPage";
+import type { ActiveHandDem } from "./flowSim/types";
 import type { Amc, ClickSample, DatasetSummary, HandGrid, HypsometricCurve, SampleChoice } from "./types/flood";
 import { apiUrl, readError } from "./api/client";
 import { readHandCog } from "./utils/cogRenderer";
 import { COVERS, cnForAmc, solveStage } from "./utils/hydrology";
 
+type ActiveTool = "hand" | "flow-sim";
+
+function initialToolFromHash(): ActiveTool {
+  if (typeof window !== "undefined" && window.location.hash === "#flow-sim") {
+    return "flow-sim";
+  }
+  return "hand";
+}
+
 export default function App() {
+  const [activeTool, setActiveTool] = useState<ActiveTool>(initialToolFromHash);
+  const [flowSimMounted, setFlowSimMounted] = useState<boolean>(() => initialToolFromHash() === "flow-sim");
+  const [activeHandDem, setActiveHandDem] = useState<ActiveHandDem | null>(null);
+
   const [curve, setCurve] = useState<HypsometricCurve | null>(null);
   const [grid, setGrid] = useState<HandGrid | null>(null);
   const [rainfallMm, setRainfallMm] = useState(100);
@@ -34,6 +50,14 @@ export default function App() {
   useEffect(() => {
     void loadCatalog();
   }, []);
+
+  function selectTool(tool: ActiveTool) {
+    setActiveTool(tool);
+    if (tool === "flow-sim") setFlowSimMounted(true);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", tool === "flow-sim" ? "#flow-sim" : "#hand");
+    }
+  }
 
   async function loadSummary(summary: DatasetSummary) {
     const token = ++request.current;
@@ -88,7 +112,13 @@ export default function App() {
         method: "POST",
       });
       if (!response.ok) throw new Error(await readError(response));
-      await loadSummary((await response.json()) as DatasetSummary);
+      const summary = (await response.json()) as DatasetSummary;
+      setActiveHandDem({
+        kind: "sample",
+        sampleId,
+        label: name ?? summary.source_name ?? sampleId,
+      });
+      await loadSummary(summary);
     } catch (exc) {
       setStatus(null);
       setError(exc instanceof Error ? exc.message : "The sample basin did not load.");
@@ -109,55 +139,99 @@ export default function App() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#121816]">
-      <FloodMap grid={grid} stageM={solution?.hM ?? 0} onInspect={setInspector} onOpenDocs={() => setDocsOpen(true)} />
-      <div className="pointer-events-auto absolute left-3 top-3 z-20 w-[min(280px,calc(100vw-1.5rem))]">
-        <ControlPanel
-          curve={curve}
-          rainfallMm={rainfallMm}
-          coverId={coverId}
-          amc={amc}
-          cn={cn}
-          streamKm2={streamKm2}
-          accumCells={accumCells}
-          status={status}
-          error={error}
-          onRainfall={setRainfallMm}
-          onCover={chooseCover}
-          onAmc={chooseAmc}
-          onCn={setCn}
-          samples={samples}
-          onStreamKm2={setStreamKm2}
-          onAccumCells={setAccumCells}
-          onSample={(id) => {
-            const choice = samples.find((item) => item.id === id);
-            void loadSample(id, choice?.name);
-          }}
-          onUpload={() => setUploadOpen(true)}
-        />
+      {/* Platform Tool Switcher */}
+      <nav
+        aria-label="Flood modeling tools"
+        className="pointer-events-auto fixed left-1/2 top-3 z-40 flex -translate-x-1/2 overflow-hidden border border-[#e4d8c4] bg-paper/95 text-xs font-medium text-ink shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md"
+      >
+        <button
+          type="button"
+          aria-pressed={activeTool === "hand"}
+          onClick={() => selectTool("hand")}
+          className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2 transition ${
+            activeTool === "hand" ? "bg-tide text-white" : "text-ink hover:bg-white"
+          }`}
+        >
+          <Map size={14} />
+          <span>HAND Flood Extent</span>
+        </button>
+        <button
+          type="button"
+          aria-pressed={activeTool === "flow-sim"}
+          onClick={() => selectTool("flow-sim")}
+          className={`inline-flex items-center gap-1.5 whitespace-nowrap border-l border-[#e4d8c4] px-3.5 py-2 transition ${
+            activeTool === "flow-sim" ? "bg-tide text-white" : "text-ink hover:bg-white"
+          }`}
+        >
+          <Waves size={14} />
+          <span>3D Flow Simulation</span>
+        </button>
+      </nav>
+
+      {/* Tool 1: Existing HAND Tool (intact and state-preserved) */}
+      <div className={activeTool === "hand" ? "relative h-screen w-screen overflow-hidden bg-[#121816]" : "hidden"}>
+        <FloodMap grid={grid} stageM={solution?.hM ?? 0} onInspect={setInspector} onOpenDocs={() => setDocsOpen(true)} />
+        <div className="pointer-events-auto absolute left-3 top-14 z-20 w-[min(280px,calc(100vw-1.5rem))] min-[900px]:top-3">
+          <ControlPanel
+            curve={curve}
+            rainfallMm={rainfallMm}
+            coverId={coverId}
+            amc={amc}
+            cn={cn}
+            streamKm2={streamKm2}
+            accumCells={accumCells}
+            status={status}
+            error={error}
+            onRainfall={setRainfallMm}
+            onCover={chooseCover}
+            onAmc={chooseAmc}
+            onCn={setCn}
+            samples={samples}
+            onStreamKm2={setStreamKm2}
+            onAccumCells={setAccumCells}
+            onSample={(id) => {
+              const choice = samples.find((item) => item.id === id);
+              void loadSample(id, choice?.name);
+            }}
+            onUpload={() => setUploadOpen(true)}
+          />
+        </div>
+        <div className="pointer-events-auto absolute bottom-3 left-3 right-3 z-20 min-[900px]:bottom-auto min-[900px]:left-auto min-[900px]:right-3 min-[900px]:top-3 min-[900px]:w-[300px]">
+          <ResultsCard
+            curve={curve}
+            solution={solution}
+            rainfallMm={rainfallMm}
+            amc={amc}
+            cn={cn}
+            inspector={inspector}
+          />
+        </div>
+        {docsOpen && <TechDoc onClose={() => setDocsOpen(false)} />}
+        {uploadOpen && (
+          <UploadModal
+            streamKm2={streamKm2}
+            accumCells={accumCells}
+            onStreamKm2={setStreamKm2}
+            onAccumCells={setAccumCells}
+            onClose={() => setUploadOpen(false)}
+            onProcessed={(summary, source) => {
+              setUploadOpen(false);
+              if (source?.kind === "dem") {
+                setActiveHandDem({ kind: "file", file: source.file, label: source.file.name });
+              } else if (source?.kind === "hand") {
+                setActiveHandDem({ kind: "hand_only", label: source.file.name });
+              }
+              void loadSummary(summary);
+            }}
+          />
+        )}
       </div>
-      <div className="pointer-events-auto absolute bottom-3 left-3 right-3 z-20 min-[900px]:bottom-auto min-[900px]:left-auto min-[900px]:right-3 min-[900px]:top-3 min-[900px]:w-[300px]">
-        <ResultsCard
-          curve={curve}
-          solution={solution}
-          rainfallMm={rainfallMm}
-          amc={amc}
-          cn={cn}
-          inspector={inspector}
-        />
-      </div>
-      {docsOpen && <TechDoc onClose={() => setDocsOpen(false)} />}
-      {uploadOpen && (
-        <UploadModal
-          streamKm2={streamKm2}
-          accumCells={accumCells}
-          onStreamKm2={setStreamKm2}
-          onAccumCells={setAccumCells}
-          onClose={() => setUploadOpen(false)}
-          onProcessed={(summary) => {
-            setUploadOpen(false);
-            void loadSummary(summary);
-          }}
-        />
+
+      {/* Tool 2: Standalone 3D Hydrodynamic Flow Simulation (ANUGA + Three.js) */}
+      {flowSimMounted && (
+        <div className={activeTool === "flow-sim" ? "h-screen w-screen" : "hidden"}>
+          <FlowSimPage handSamples={samples} activeHandDem={activeHandDem} />
+        </div>
       )}
     </div>
   );

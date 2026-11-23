@@ -4,23 +4,54 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    restart: unless-stopped
     ports:
       # Host 8000 is taken by sinag_web_platform. Container port stays 8000;
-      # nginx in the web service still proxies to api:8000 on the compose network.
+      # nginx in the web service still proxies to api:8000 on the Compose network.
       - "127.0.0.1:8010:8000"
     environment:
       DATA_DIR: /app/data
     volumes:
       - hand_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  flow-sim:
+    build:
+      context: .
+      dockerfile: flow_sim_backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8011:8001"
+    environment:
+      FLOW_SIM_DATA_DIR: /app/flow_data
+      SAMPLE_DEM_DIR: /opt/sample-dem
+    volumes:
+      - flow_sim_data:/app/flow_data
+    healthcheck:
+      test: ["CMD", "/opt/conda/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/flow-sim/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   web:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "8080:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+      flow-sim:
+        condition: service_healthy
 
 volumes:
   hand_data:
+  flow_sim_data:

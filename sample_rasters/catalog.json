@@ -16,5 +16,23 @@
     "id": "r3_cabanatuan",
     "name": "Cabanatuan, Nueva Ecija",
     "note": "Mayapyap - Valdefuente area of Cabanatuan."
+  },
+  {
+    "file": "sta_ignacia.tif",
+    "id": "sta_ignacia",
+    "name": "Santa Ignacia, Tarlac",
+    "note": "Mountainous area of Santa Ignacia."
+  },
+  {
+    "file": "tarlac_city.tif",
+    "id": "tarlac_city",
+    "name": "Tarlac City, Tarlac",
+    "note": "Tarlac City metropolitan area."
+  },
+  {
+    "file": "cabiao.tif",
+    "id": "cabiao",
+    "name": "Cabiao, Nueva Ecija",
+    "note": "Agro-industrial area of Cabiao in Nueva Ecija."
   }
 ]

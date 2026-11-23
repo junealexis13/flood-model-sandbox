@@ -10,5 +10,6 @@ backend/.venv/
 backend/data/*
 !backend/data/sample/
 !backend/data/sample/**
+flow_sim_backend/data/
 .DS_Store
 .venv/

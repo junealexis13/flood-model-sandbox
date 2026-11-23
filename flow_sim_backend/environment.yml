@@ -1,0 +1,14 @@
+name: anuga-flow-sim
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - anuga
+  - fastapi>=0.115
+  - uvicorn>=0.32
+  - python-multipart>=0.0.12
+  - rasterio>=1.4
+  - netCDF4>=1.6
+  - numpy>=1.26
+  - pyproj>=3.6
+  - shapely>=2.0

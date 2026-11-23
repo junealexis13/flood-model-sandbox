@@ -9,7 +9,7 @@ interface UploadModalProps {
   onStreamKm2: (value: number) => void;
   onAccumCells: (value: number | null) => void;
   onClose: () => void;
-  onProcessed: (summary: DatasetSummary) => void;
+  onProcessed: (summary: DatasetSummary, source?: { kind: "dem" | "hand"; file: File }) => void;
 }
 
 type Kind = "dem" | "hand";
@@ -23,6 +23,7 @@ export function UploadModal({
   onProcessed,
 }: UploadModalProps) {
   const [kind, setKind] = useState<Kind>("dem");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<UploadPreview | null>(null);
   const [window, setWindow] = useState<SceneWindow | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -30,6 +31,7 @@ export function UploadModal({
 
   async function onFile(file: File | undefined) {
     if (!file) return;
+    setSelectedFile(file);
     setError(null);
     setBusy("Reading the GeoTIFF…");
     setPreview(null);
@@ -86,7 +88,8 @@ export function UploadModal({
     try {
       const response = await fetch(apiUrl("/api/datasets"), { method: "POST", body });
       if (!response.ok) throw new Error(await readError(response));
-      onProcessed((await response.json()) as DatasetSummary);
+      const summary = (await response.json()) as DatasetSummary;
+      onProcessed(summary, selectedFile ? { kind, file: selectedFile } : undefined);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "Processing failed.");
     } finally {

@@ -148,60 +148,80 @@ export function FloodMap({ grid, stageM, onInspect, onOpenDocs }: FloodMapProps)
     <div className="absolute inset-0">
       <div ref={containerRef} className="h-full w-full" />
       <canvas id="hand-depth-canvas" ref={canvasRef} className="pointer-events-none absolute -left-[9999px] top-0" aria-hidden />
-      <div className="pointer-events-none absolute bottom-[15.5rem] left-1/2 z-30 flex w-[min(680px,calc(100vw-1.5rem))] -translate-x-1/2 flex-wrap items-stretch justify-center gap-2 min-[900px]:bottom-6">
-        <div className="pointer-events-auto flex h-fit self-center overflow-hidden border border-white/15 bg-[#121816]/80 text-[11px] text-stone-200 shadow-lg backdrop-blur-md">
-          <button
-            type="button"
-            className={`px-2.5 py-2 ${basemap === "hybrid" ? "bg-white text-ink" : ""}`}
-            aria-pressed={basemap === "hybrid"}
-            onClick={() => setBasemap("hybrid")}
-          >
-            Google
-          </button>
-          <button
-            type="button"
-            className={`px-2.5 py-2 ${basemap === "osm" ? "bg-white text-ink" : ""}`}
-            aria-pressed={basemap === "osm"}
-            onClick={() => setBasemap("osm")}
-          >
-            OSM
-          </button>
-        </div>
-        <button
-          type="button"
-          className="pointer-events-auto inline-flex items-center gap-1.5 self-center border border-[#e4d8c4] bg-paper/95 px-2.5 py-2 text-sm text-tide shadow-lg"
-          onClick={onOpenDocs}
+      <div className="pointer-events-none absolute bottom-[15.5rem] left-3 right-3 z-30 flex justify-center min-[900px]:bottom-5 min-[900px]:left-[296px] min-[900px]:right-[316px]">
+        <div
+          role="region"
+          aria-label="Map display controls"
+          className="pointer-events-auto inline-flex max-w-full items-stretch divide-x divide-white/15 border border-white/15 bg-[#121816]/88 text-stone-100 shadow-[0_14px_38px_rgba(0,0,0,0.42)] backdrop-blur-md"
         >
-          <BookOpen size={14} />
-          Technical note
-        </button>
-        <div className="pointer-events-none w-[220px] border border-white/15 bg-[#121816]/80 px-3 py-2 text-white shadow-lg backdrop-blur-md">
-          <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-stone-300">Water depth</p>
-          <div className="h-2 w-full" style={{ background: depthRampCss() }} />
-          <div className="relative mt-1 h-3.5 font-mono text-[10px] text-stone-300">
-            <span className="absolute left-0">0</span>
-            <span className="absolute left-[12.5%] -translate-x-1/2">1 m</span>
-            <span className="absolute left-[37.5%] -translate-x-1/2">3 m</span>
-            <span className="absolute left-[75%] -translate-x-1/2 whitespace-nowrap">6 m+</span>
+          <div className="flex flex-col justify-between gap-1.5 px-3 py-2">
+            <span className="text-[9px] uppercase tracking-[0.18em] text-stone-400">Basemap</span>
+            <div className="inline-flex overflow-hidden border border-white/15 bg-white/5 text-[11px]">
+              <button
+                type="button"
+                className={`px-2.5 py-0.5 font-medium transition ${
+                  basemap === "hybrid" ? "bg-tide text-white" : "text-stone-300 hover:bg-white/10 hover:text-white"
+                }`}
+                aria-pressed={basemap === "hybrid"}
+                onClick={() => setBasemap("hybrid")}
+              >
+                Google
+              </button>
+              <button
+                type="button"
+                className={`border-l border-white/15 px-2.5 py-0.5 font-medium transition ${
+                  basemap === "osm" ? "bg-tide text-white" : "text-stone-300 hover:bg-white/10 hover:text-white"
+                }`}
+                aria-pressed={basemap === "osm"}
+                onClick={() => setBasemap("osm")}
+              >
+                OSM
+              </button>
+            </div>
           </div>
+
+          <div className="hidden w-[224px] flex-col justify-between gap-1 px-3.5 py-2 min-[900px]:flex">
+            <span className="text-[9px] uppercase tracking-[0.18em] text-stone-400">Water depth</span>
+            <div>
+              <div className="h-2 w-full" style={{ background: depthRampCss() }} />
+              <div className="relative mt-1 h-3 font-mono text-[10px] leading-none text-stone-300">
+                <span className="absolute left-0">0</span>
+                <span className="absolute left-[12.5%] -translate-x-1/2">1 m</span>
+                <span className="absolute left-[37.5%] -translate-x-1/2">3 m</span>
+                <span className="absolute left-[75%] -translate-x-1/2 whitespace-nowrap">6 m+</span>
+              </div>
+            </div>
+          </div>
+
+          <label className="flex w-[8.5rem] flex-col justify-between gap-1.5 px-3 py-2 min-[900px]:w-[9.5rem]">
+            <span className="flex items-center justify-between text-[9px] uppercase tracking-[0.18em] text-stone-400">
+              Overlay
+              <span className="font-mono text-[10px] normal-case tracking-normal text-stone-200">
+                {Math.round(overlay * 100)}%
+              </span>
+            </span>
+            <input
+              className="h-4 cursor-pointer"
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round(overlay * 100)}
+              aria-label="Flood overlay opacity"
+              aria-valuetext={`${Math.round(overlay * 100)} percent opaque`}
+              onChange={(event) => setOverlay(Number(event.target.value) / 100)}
+            />
+          </label>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 whitespace-nowrap px-3.5 py-2 text-xs font-medium text-teal-200 transition hover:bg-white/10 hover:text-white"
+            onClick={onOpenDocs}
+          >
+            <BookOpen size={14} className="shrink-0" />
+            <span>Technical note</span>
+          </button>
         </div>
-        <label className="pointer-events-auto flex w-[9.5rem] flex-col justify-center border border-white/15 bg-[#121816]/80 px-3 py-2 text-white shadow-lg backdrop-blur-md">
-          <span className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-stone-300">
-            Overlay
-            <span className="font-mono normal-case tracking-normal">{Math.round(overlay * 100)}%</span>
-          </span>
-          <input
-            className="mt-1.5"
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={Math.round(overlay * 100)}
-            aria-label="Flood overlay opacity"
-            aria-valuetext={`${Math.round(overlay * 100)} percent opaque`}
-            onChange={(event) => setOverlay(Number(event.target.value) / 100)}
-          />
-        </label>
       </div>
     </div>
   );
